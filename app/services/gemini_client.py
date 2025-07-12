@@ -6,10 +6,10 @@ load_dotenv()
 
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
-def query_gemini(prompt: str) -> str:
+def query_gemini(prompt: str, model: str) -> str:
     try:
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model=model,
             contents=prompt
         )
         return response.text
