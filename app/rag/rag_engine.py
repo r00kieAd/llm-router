@@ -1,13 +1,35 @@
-import os
+import os, fitz
 from app.rag.embedder import embed_documents, embed_query
 from app.rag.retriever import Retriever
 
+def load_pdf_content(file_path: str) -> str:
+    doc = fitz.open(file_path)
+    text = ""
+    for page in doc:
+        text += page.get_text()
+    return text
+
 def load_documents_from_txt(folder_path: str = "app/data") -> list[str]:
     docs = []
-    for filename in os.listdir(folder_path):
-        if filename.endswith(".txt"):
-            with open(os.path.join(folder_path, filename), "r", encoding="utf-8") as f:
-                docs.append(f.read())
+    if not os.path.exists(folder_path):
+        return docs
+    try:
+        for filename in os.listdir(folder_path):
+            if filename.startswith('.'):
+                continue
+            full_path = os.path.join(folder_path, filename)
+            # print('full_path:', full_path)
+            if filename.endswith(".txt"):
+                with open(full_path, "r", encoding="utf-8") as f:
+                    docs.append(f.read())
+            elif filename.endswith(".pdf"):
+                docs.append(load_pdf_content(full_path))
+            else:
+                continue
+            # print('updated doc:', docs)
+    except Exception as e:
+        print(f"Error loading document '{filename}': {e}")
+    
     return docs
 
 def build_retriever() -> Retriever | None:
