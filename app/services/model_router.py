@@ -8,8 +8,9 @@ def route_to_client(prompt: str, client: str, model: str) -> dict:
         response = query_openai(prompt, model)
     else:
         response = "Select a valid client"
+        model = None
 
     return {
-        "response": response,
-        "model_used": model
+        "response": response or "No response returned",
+        "model_used": model or "Unknown"
     }
