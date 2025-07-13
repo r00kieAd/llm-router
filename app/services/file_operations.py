@@ -3,7 +3,7 @@ from fastapi import UploadFile
 
 ALLOWED_EXTENSIONS = ('.txt', '.pdf')
 UPLOAD_DIR = 'app/data'
-MAX_SIZE = 5
+MAX_SIZE = 1
 
 def save_file(file: UploadFile, save_dir: str = UPLOAD_DIR) -> str:
     filename = file.filename
