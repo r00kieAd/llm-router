@@ -1,4 +1,4 @@
-### 🧠 llm-router
+### 🧠 llm-router ###
 
 `llm-router` is a backend application built with FastAPI that allows you to route API requests to different Large Language Models (LLMs) like OpenAI and Gemini, and optionally enhance responses using Retrieval-Augmented Generation (RAG).
 
