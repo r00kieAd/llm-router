@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+import os, uvicorn
 
 app = FastAPI()
 
@@ -12,7 +13,9 @@ app.include_router(file_router)
 for route in app.routes:
     print(f"{route.path} [{','.join(route.methods)}]")
 
-
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("app.main:app", host="0.0.0.0", port=port, reload=False)
 
 
 
