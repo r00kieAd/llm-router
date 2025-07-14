@@ -1,6 +1,8 @@
-# 🧠 llm-router
+### 🧠 llm-router
 
 `llm-router` is a backend application built with FastAPI that allows you to route API requests to different Large Language Models (LLMs) like OpenAI and Gemini, and optionally enhance responses using Retrieval-Augmented Generation (RAG).
+
+# "work is in progress so below information is not up to date with the repository"
 
 ---
 
@@ -19,14 +21,20 @@
 ```
 app/
 ├── main.py                 # FastAPI app entrypoint
+├── data/                # Folder for storing Temporary data to be used by RAG and LLM
+├── rag
+|   ├── embedder.py         # to embed the documents (if available) and prompt
+│   ├── reriever.py         # to retrieve the embeddings and make it as numeric array using numpy
+│   └── rag_engine.py       # RAG embedding & prompt context
 ├── routes/
 │   ├── prompt.py           # /ask endpoint
-│   └── files.py            # /upload and /clear-data
+│   └── files.py            # /upload and /clear-data are routed accordingly to file_operaitons.py
+|   └── start.py            # app run confirm
 ├── services/
-│   ├── model_router.py     # routes requests to correct LLM client
-│   ├── file_operations.py  # file save/delete logic
-│   └── rag_engine.py       # RAG embedding & prompt context
-├── data/                   # Holds uploaded .txt and .pdf files
+│   ├── gemini_client.py    # sends generated prompt to gemini and returns the response
+│   ├── openai_client.py    # sends generated prompt to openai and returns the response
+│   └── model_router.py     # route service to ping the correct llm client as per request
+|   └── file_operations.py  # all operations involving upload and delete
 ```
 
 ---
