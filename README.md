@@ -46,11 +46,6 @@ app/
 - `openai`, `google-genai`
 - `sentence-transformers`, `PyMuPDF`
 
-Install dependencies:
-```bash
-pip install -r requirements.txt
-```
-
 ---
 
 ## 🔑 Environment Variables
@@ -58,6 +53,8 @@ pip install -r requirements.txt
 Create a `.env` file in the root directory:
 
 ```
+HOST=your_host_name
+PORT=your_port
 OPENAI_API_KEY=your-openai-key
 GEMINI_API_KEY=your-gemini-key
 ```
@@ -109,6 +106,16 @@ curl -X DELETE localhost/clear-data
 ```
 
 ---
+
+## 🏁 Initialize Project Locally
+
+```bash
+$ git clone https://github.com/r00kieAd/llm-router.git
+$ python -m venv venv
+$ pip install -r requirements
+$ python main.py # for custom host and port using .env
+$ uvicorn main:app # will give default uri http://127.0.0.1:8000
+```
 
 ## 🧪 Testing
 

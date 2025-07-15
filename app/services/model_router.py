@@ -1,5 +1,5 @@
-from app.services.gemini_client import query_gemini
-from app.services.openai_client import query_openai
+from services.gemini_client import query_gemini
+from services.openai_client import query_openai
 
 def route_to_client(prompt: str, client: str, model: str) -> dict:
     if client == "gemini":
