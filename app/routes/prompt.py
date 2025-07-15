@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from app.services.model_router import route_to_client
-from app.rag.rag_engine import build_retriever, augment_prompt_with_context
+from services.model_router import route_to_client
+from rag.rag_engine import build_retriever, augment_prompt_with_context
 
 router = APIRouter()
 retriever = build_retriever()

@@ -1,6 +1,6 @@
 import os, fitz
-from app.rag.embedder import embed_documents, embed_query
-from app.rag.retriever import Retriever
+from rag.embedder import embed_documents, embed_query
+from rag.retriever import Retriever
 
 def load_pdf_content(file_path: str) -> str:
     doc = fitz.open(file_path)
