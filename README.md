@@ -116,12 +116,12 @@ $ uvicorn main:app # will give default uri http://127.0.0.1:8000
 - Validate context injection by comparing answers
 
 ---
-
 ## 🛠️ To Do (Next Steps)
 
 - [ ] Add support for `.md`, `.docx`, `.csv`
 - [ ] Implement file-specific RAG selection
-- [ ] Deploy to cloud (Render, Vercel, AWS)
+- [x] Deploy to cloud (Render, Vercel, AWS)
+- [ ] Connect with a frontend client
 
 ---
 
