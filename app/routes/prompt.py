@@ -6,7 +6,6 @@ from rag.rag_engine import build_retriever, augment_prompt_with_context
 from utils.session_store import token_store
 
 router = APIRouter()
-retriever = build_retriever()
 
 class AskRequest(BaseModel):
     username: str
@@ -26,16 +25,12 @@ async def ask(request: AskRequest, authorization: str = Header(None)):
         if authorized == "err":
             return JSONResponse(status_code=500, content={"msg": f"unable to verify user '{request.username}'"})
         
+        retriever = build_retriever(request.username)
         if request.use_rag:
-            updated_prompt, rag_used = augment_prompt_with_context(
-                request.prompt, retriever)
+            updated_prompt, rag_used = augment_prompt_with_context(request.prompt, retriever)
         else:
             updated_prompt = request.prompt
             rag_used = False
-        print("Final prompt:", updated_prompt)
-        print("Client:", request.client)
-        print("Model:", request.model)
-        print("RAG used:", rag_used)
         response = route_to_client(updated_prompt, request.client, request.model)
         response["rag_used"] = rag_used
         return response
