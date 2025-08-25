@@ -1,7 +1,7 @@
 import os, requests, uuid, traceback
 from dotenv import load_dotenv
 from fastapi.responses import JSONResponse
-from data.session_store import token_store
+from utils.session_store import token_store
 
 load_dotenv()
 

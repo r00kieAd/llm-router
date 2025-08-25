@@ -2,10 +2,12 @@ import os
 from fastapi import UploadFile
 
 ALLOWED_EXTENSIONS = ('.txt', '.pdf')
-UPLOAD_DIR = 'app/data'
+UPLOAD_DIR = os.path.join(os.getcwd(), "data")
 MAX_SIZE = 1
 
-def save_file(file: UploadFile, save_dir: str = UPLOAD_DIR) -> str:
+def save_file(file: UploadFile, username) -> str:
+    username = os.path.basename(username)
+    save_dir = os.path.join(UPLOAD_DIR, username)
     filename = file.filename
     if not filename or not filename.lower().endswith(ALLOWED_EXTENSIONS):
         raise ValueError("Unsupported file format")
@@ -20,7 +22,9 @@ def save_file(file: UploadFile, save_dir: str = UPLOAD_DIR) -> str:
         f.write(content)
     return path
 
-def clear_files(save_dir: str = UPLOAD_DIR) -> list[str]:
+def clear_files(username) -> list[str]:
+    username = os.path.basename(username)
+    save_dir = os.path.join(UPLOAD_DIR, username)
     deleted = []
     if not os.path.exists(save_dir):
         return deleted
