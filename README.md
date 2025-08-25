@@ -266,19 +266,3 @@ Response:
 
 Set `use_rag: true` and optionally `top_k: 2`. The server will build or reuse a retriever for `alice` and prepend context to the prompt.
 
-## What I changed in README
-
-- Replaced high-level notes with in-repo, code-level documentation for `rag/`, `routes/`, and `services/`.
-- Added request/response shapes, env vars, and operational notes.
-
-If you want, I can also:
-
-- Increase default upload `MAX_SIZE` and add chunking for long PDF/text documents.
-- Add OpenAPI examples (response models) for each endpoint.
-
-Requirements coverage:
-
-- Analyze `app/` and document: Done
-- Update README `rag` usage: Done
-- Update README `routes` request/response: Done
-- Update README `services` operations: Done
