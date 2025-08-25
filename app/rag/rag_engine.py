@@ -2,6 +2,9 @@ import os, fitz
 from rag.embedder import embed_documents, embed_query
 from rag.retriever import Retriever
 
+FILE_DIR = os.path.join(os.getcwd(), "data")
+retriever_cache = {}
+
 def load_pdf_content(file_path: str) -> str:
     doc = fitz.open(file_path)
     text = ""
@@ -9,7 +12,9 @@ def load_pdf_content(file_path: str) -> str:
         text += page.get_text()
     return text
 
-def load_documents_from_txt(folder_path: str = "app/data") -> list[str]:
+def load_documents_from_txt(username, folder_path: str = FILE_DIR) -> list[str]:
+    username = os.path.basename(username)
+    folder_path = os.path.join(FILE_DIR, username)
     docs = []
     if not os.path.exists(folder_path):
         return docs
@@ -32,16 +37,23 @@ def load_documents_from_txt(folder_path: str = "app/data") -> list[str]:
     
     return docs
 
-def build_retriever() -> Retriever | None:
-    docs = load_documents_from_txt()
+def build_retriever(username: str = None) -> Retriever | None:
+    if not username:
+        return
+    
+    if username in retriever_cache:
+        return retriever_cache[username]
+
+    docs = load_documents_from_txt(username)
     if not docs:
         return None
     embeddings = embed_documents(docs)
     retriever = Retriever()
     retriever.add_documents(embeddings, docs)
+    retriever_cache[username] = retriever
     return retriever
 
-def augment_prompt_with_context(query: str, retriever: Retriever | None, top_k: int = 3) -> tuple[str, bool]:
+def augment_prompt_with_context(query: str, retriever: Retriever | None, top_k: int = 1) -> tuple[str, bool]:
     if retriever is None:
         return query, False
     query_emb = embed_query(query)
