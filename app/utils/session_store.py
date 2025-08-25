@@ -27,7 +27,6 @@ class Tokens:
             if self.active_tokens.get(username, 0) == 0:
                 self.increaseCount()
             self.active_tokens[username] = token
-            print(self.active_tokens)
             return True
         except:
             self.decreaseCount()
@@ -39,7 +38,6 @@ class Tokens:
             if self.active_tokens.get(username, 0) == 0:
                 return True
             del self.active_tokens[username]
-            print(self.active_tokens)
             self.decreaseCount()
             return True
         except:
