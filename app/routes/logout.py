@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import traceback
-from data.session_store import token_store
+from utils.session_store import token_store
 
 logout_router = APIRouter()
 
