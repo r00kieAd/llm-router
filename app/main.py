@@ -1,9 +1,24 @@
 from fastapi import FastAPI
 from dotenv import load_dotenv
 import os, uvicorn
+from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 app = FastAPI()
+
+cors_env = os.getenv("CORS_ALLOWED_ORIGINS", "")
+if cors_env:
+    allow_origins = [o.strip() for o in cors_env.split(",") if o.strip()]
+else:
+    allow_origins = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allow_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 from routes.start import router as start_app
 from routes.prompt import router as prompt_router
