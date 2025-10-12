@@ -2,14 +2,18 @@ OPENAI = "OpenAI"
 GEMINI = "Gemini"
 
 class CurrentLLM:
-    def __init__(self, llm = OPENAI, user = "dummy");
-    self.user_choice = {user: llm}
+    user_choice = {}
 
-    def setLLM(self, user):
-        self.user_choice[user] = OPENAI
-        return OPENAI
+    def setLLM(self, user, choice = OPENAI):
+        self.__class__.user_choice[user] = choice
+        return self.__class__.user_choice[user]
     
     def getLLM(self, user):
-        return self.user_choice.get(user, None)
+        return self.__class__.user_choice.get(user, None)
+    
+    def removeLLM(self, user):
+        if self.getLLM(user) is not None:
+            del self.__class__.user_choice[user]
+        return True
 
     
