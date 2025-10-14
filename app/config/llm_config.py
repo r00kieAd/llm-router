@@ -42,7 +42,7 @@ class LLMConfig:
         return
 
     def getDefaultTemp(self):
-        return 1.0
+        return 0.7
 
     def getDefaultTop_p(self):
         return 1.0
@@ -56,7 +56,7 @@ class LLMConfig:
             return 1
 
     def getDefaultMaxOutputTokens(self):
-        return 8000
+        return 1024
 
     def getDefaultFreqPenalty(self):
         return 0.0

@@ -18,7 +18,7 @@ class LLMSettingsRequest(BaseModel):
     temp: float
     top_p: float
     top_k: float
-    output_tokens: float
+    output_tokens: int
     freq_penalty: float
     presence_penalty: float
 
