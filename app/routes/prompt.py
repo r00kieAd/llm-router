@@ -7,12 +7,12 @@ from utils.session_store import token_store
 
 router = APIRouter()
 
+
 class AskRequest(BaseModel):
     username: str
     prompt: str
-    client: str
     model: str
-    top_k: int = 1
+    instruction: str
     use_rag: bool = False
 
 
@@ -32,7 +32,8 @@ async def ask(request: AskRequest, authorization: str = Header(None)):
         else:
             updated_prompt = request.prompt
             rag_used = False
-        response = route_to_client(updated_prompt, request.client, request.model)
+        
+        response = route_to_client(updated_prompt, request.username, request.model, request.instruction)
         response["rag_used"] = rag_used
         return response
     except Exception as e:

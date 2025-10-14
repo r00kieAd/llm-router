@@ -25,11 +25,13 @@ from routes.prompt import router as prompt_router
 from routes.files import router as file_router
 from routes.authenticate import auth_router
 from routes.logout import logout_router
+from routes.settings import settings_router
 app.include_router(start_app)
 app.include_router(prompt_router)
 app.include_router(file_router)
 app.include_router(auth_router)
 app.include_router(logout_router)
+app.include_router(settings_router)
 
 
 if __name__ == "__main__":
