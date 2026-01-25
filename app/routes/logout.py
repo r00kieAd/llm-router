@@ -21,4 +21,5 @@ async def logoutProcess(request: LogoutInterface):
     except Exception as e:
         tb = traceback.extract_tb(e.__traceback__)
         line_number = tb[-1].lineno if tb else None
-        raise HTTPException(status_code=500, detail={"error": str(e), "line_number": {line_number}})
+        return JSONResponse(status_code=500, content={"logged_out": "logged out with exception"})
+        # raise HTTPException(status_code=500, detail={"error": str(e), "line_number": {line_number}})

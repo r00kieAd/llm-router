@@ -27,6 +27,7 @@ def query_openai(prompt: str, model: str, instruction: str, temperature: float, 
                 top_p=top_p,
                 max_output_tokens=max_output_token
             )
+        print(response)
         return response.output_text if response else "Error"
     except Exception as e:
         return f"[OpenAI Error] {str(e)}"
