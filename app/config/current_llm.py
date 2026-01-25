@@ -1,10 +1,11 @@
+AUTO = "Auto"
 OPENAI = "OpenAI"
 GEMINI = "Gemini"
 
 class CurrentLLM:
     user_choice = {}
 
-    def setLLM(self, user, choice = OPENAI):
+    def setLLM(self, user, choice = AUTO):
         self.__class__.user_choice[user] = choice
         return self.__class__.user_choice[user]
     

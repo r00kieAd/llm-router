@@ -19,7 +19,6 @@ class AskRequest(BaseModel):
 @router.post("/ask")
 async def ask(request: AskRequest, authorization: str = Header(None)):
     try:
-        
         authorized = authorizationCheck(request.username, authorization)
         if not authorized:
             return JSONResponse(status_code=401, content={"msg": f"user '{request.username}' is not authorized"})
@@ -27,12 +26,12 @@ async def ask(request: AskRequest, authorization: str = Header(None)):
             return JSONResponse(status_code=500, content={"msg": f"unable to verify user '{request.username}'"})
         
         retriever = build_retriever(request.username)
+        
         if request.use_rag:
             updated_prompt, rag_used = augment_prompt_with_context(request.prompt, retriever, top_k = request.top_k)
         else:
             updated_prompt = request.prompt
             rag_used = False
-        
         response = route_to_client(updated_prompt, request.username, request.model, request.instruction)
         response["rag_used"] = rag_used
         return response

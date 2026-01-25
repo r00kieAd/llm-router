@@ -14,7 +14,7 @@ class AuthenticateInterface(BaseModel):
 @auth_router.post("/authenticate")
 async def authenticate(request: AuthenticateInterface):
     try:
-        print(request)
+        # print(request)
         if request.is_user:
             response = getUser(request.username, request.password)
             return response
