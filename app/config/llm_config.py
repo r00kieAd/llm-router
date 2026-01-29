@@ -1,7 +1,8 @@
 from config.current_llm import CurrentLLM
+from config.all_models import model_provider
 
-OPENAI = "OpenAI"
-GEMINI = "Gemini"
+OPENAI = model_provider("M1")
+GEMINI = model_provider("M2")
 LLM = 'llm'
 TEMP = 'temp'
 TOPP = 'top_p'

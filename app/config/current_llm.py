@@ -1,6 +1,8 @@
-AUTO = "Auto"
-OPENAI = "OpenAI"
-GEMINI = "Gemini"
+from config.all_models import model_provider
+
+AUTO = model_provider("A")
+OPENAI = model_provider("M1")
+GEMINI = model_provider("M2")
 
 class CurrentLLM:
     user_choice = {}
