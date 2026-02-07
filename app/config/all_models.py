@@ -1,17 +1,28 @@
-def available_models():
+def model_provider(id):
+    match id:
+        case "A":
+            return "Auto"
+        case "M1":
+            return "OpenAI"
+        case "M2":
+            return "Gemini"
+        case _:
+            return None
 
+
+def available_models():
     models = {
         "ALL": [
-            {"id": "A", "name": "Auto"},
-            {"id": "M1", "name": "OpenAI"},
-            {"id":"M2", "name": "Gemini"}
+            {"id": "A", "name": model_provider("A")},
+            {"id": "M1", "name": model_provider("M1")},
+            {"id":"M2", "name": model_provider("M2")}
         ],
         "A": {
-            "FOR": "Auto",
+            "FOR": model_provider("A"),
             "LIST": []
         },
         "M1": {
-            "FOR": "OpenAI",
+            "FOR": model_provider("M1"),
             "LIST": [
                 {"model": "Auto"},
                 {"model": "gpt-4.1"},
@@ -22,7 +33,7 @@ def available_models():
             ]
         },
         "M2": {
-            "FOR": "Gemini",
+            "FOR": model_provider("M2"),
             "LIST": [
                 {"model": "Auto"},
                 {"model": "gemini-2.5-flash-lite"},
