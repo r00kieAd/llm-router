@@ -1,23 +1,20 @@
-# LLM Router
+# llm-router
 
 LLM Router is a FastAPI backend that routes prompts to different Large Language Models (LLMs) such as OpenAI and Gemini. It supports manual, semi-automatic, and fully automatic routing, and can optionally enhance responses using Retrieval-Augmented Generation (RAG).
 
 The system is designed to optimize for usefulness, cost, and reliability, not just raw model capability.
 
+##### "work is in progress so below information is not up to date with the repository"
+
 ---
 
-## Core Capabilities
+## Features
 
-- Dynamic routing across OpenAI and Gemini
-- Three routing modes:
-  - Manual: Provider and model fixed by user
-  - Semi-Auto: Provider fixed, model auto-selected
-  - Full Auto: Provider and model auto-selected
-- Intent-aware task analysis
-- Cost-aware model selection
-- Task quality caps to prevent overpaying for simple tasks
-- RAG support with .txt and .pdf files
-- FastAPI endpoints for /ask, /upload, /clear-data, authentication, and logout
+-  Route prompts dynamically to OpenAI or Gemini based on input
+-  RAG support with `.txt` and `.pdf` files
+-  Uses `sentence-transformers` (`all-MiniLM-L6-v2`) for embedding
+-  Upload files through `/upload`, delete via `/clear-data`
+-  Simple `/ask` endpoint to query LLMs with or without RAG
 
 ---
 
@@ -25,189 +22,21 @@ The system is designed to optimize for usefulness, cost, and reliability, not ju
 
 ```
 app/
-├── main.py
+├── main.py                 # FastAPI app entrypoint
+├── data/                # Folder for storing Temporary data to be used by RAG and LLM
+├── rag
+|   ├── embedder.py         # to embed the documents (if available) and prompt
+│   ├── reriever.py         # to retrieve the embeddings and make it as numeric array using numpy
+│   └── rag_engine.py       # RAG embedding & prompt context
 ├── routes/
-│   ├── prompt.py
-│   └── files.py
+│   ├── prompt.py           # /ask endpoint
+│   └── files.py            # /upload and /clear-data are routed accordingly to file_operaitons.py
+|   └── start.py            # app run confirm
 ├── services/
-│   ├── model_router.py
-│   ├── score_model.py
-│   ├── rag_engine.py
-│   └── ...
-├── rag/
-│   ├── embedder.py
-│   ├── retriever.py
-│   └── rag_engine.py
-├── data/
-```
-
----
-
-## Routing Modes
-
-### Manual Routing
-
-Provider and model are explicitly selected by the user. No scoring or inference occurs. The request is executed directly with the specified provider and model.
-
-### Semi-Auto Routing
-
-The provider is fixed by the user (OpenAI or Gemini). The model is automatically selected within that provider only based on scoring analysis.
-
-### Full Auto Routing
-
-Both provider and model are automatically selected. All eligible models compete under a unified scoring function.
-
----
-
-## Intent-Aware Routing Architecture
-
-Routing is split into four layers that work sequentially to determine the best model for a given prompt.
-
----
-
-## Layer 1: Prompt Preprocessing
-
-Extracts observable facts from the prompt without performing inference. This layer analyzes structural properties and generates signals for downstream scoring.
-
-**Outputs include:**
-
-- token_estimate: Approximate token count
-- Structural signals: Presence of code, math, questions
-- Intent surface cues: Observable characteristics from the text
-- Length flags: is_short, is_long
-
-**Example:**
-
-Prompt: "How come black holes are smaller than the Sun?"
-
-Derived signals:
-- token_estimate: 11
-- has_question: true
-- is_short: true
-
----
-
-## Layer 2: Task Inference
-
-Determines what kind of thinking the prompt requires. This layer classifies the primary task and identifies any secondary tasks.
-
-**Supported task types:**
-
-- quick_answer
-- explanation
-- reasoning
-- summarization
-- code_generation
-- code_debugging
-- planning
-- long_form_writing
-
-**Output example:**
-
-```json
-{
-  "primary_task": "quick_answer",
-  "secondary_tasks": [],
-  "confidence": 1.0
-}
-```
-
-Confidence reflects the certainty of the inference. Higher confidence means the task classification is more reliable.
-
----
-
-## Layer 3: Model Scoring and Selection
-
-### 3.1 Model Capability Profiles
-
-Each model has static metadata defining its performance across tasks and operational characteristics.
-
-Example profile:
-
-```json
-{
-  "provider": "OpenAI",
-  "model": "gpt-5",
-  "tasks": {
-    "reasoning": 9.5,
-    "quick_answer": 8.4,
-    "code_generation": 9.5
-  },
-  "cost": 3.9,
-  "latency": 3.0,
-  "stability": 8.5,
-  "max_tokens": 200000
-}
-```
-
-### 3.2 Task Quality Caps (Diminishing Returns)
-
-Some tasks do not benefit from higher intelligence beyond a certain point. Task quality caps prevent selecting expensive models for tasks that don't require maximum capability.
-
-**Defined caps:**
-
-```
-quick_answer: 7.0
-summarization: 7.5
-explanation: 8.0
-code_generation: 8.5
-code_debugging: 9.0
-reasoning: 9.5
-planning: 9.5
-long_form_writing: 9.0
-```
-
-**Effective task score calculation:**
-
-```
-effective_task_score = min(model_task_score, task_quality_cap)
-```
-
-This prevents selecting high-cost models for simple tasks. For example, if a quick answer task is routed to GPT-5 (score 9.5), the effective score is capped at 7.0, making it ineligible unless no other options exist.
-
-### 3.3 Cost Sensitivity (Contextual Cost Awareness)
-
-Cost penalties scale based on task difficulty, prompt size, and inference certainty. Cost sensitivity adjusts the weight of cost in the final scoring function.
-
-**Cost sensitivity factor calculation:**
-
-```
-cost_factor = 2.5   if task == quick_answer and tokens < 100
-            = 1.8   if tokens < 300
-            = 0.8   if confidence < 0.5
-            = 1.0   otherwise
-```
-
-When confidence is low, cost becomes less of a penalty factor. When a task is simple (quick_answer) and the prompt is short (< 100 tokens), cost sensitivity increases to 2.5, strongly discouraging expensive models.
-
-### 3.4 Final Scoring Formula
-
-For each eligible model, a composite score is calculated:
-
-**Base score:**
-
-```
-base_score = 2 × effective_primary_task_score
-           + 0.5 × sum(secondary_task_scores)
-```
-
-The primary task is weighted twice to reflect its importance. Secondary tasks contribute half as much.
-
-**Confidence-scaled score:**
-
-```
-confidence_scaled_score = base_score × (0.5 + confidence)
-```
-
-A confidence value of 0.5 (low) multiplies the base score by 1.0. A confidence value of 1.0 (high) multiplies by 1.5, boosting the score.
-
-**Final score:**
-
-```
-final_score = confidence_scaled_score
-            - (cost × 0.6 × cost_factor)
-            - (latency × 0.4)
-            + (stability × 0.25)
+│   ├── gemini_client.py    # sends generated prompt to gemini and returns the response
+│   ├── openai_client.py    # sends generated prompt to openai and returns the response
+│   └── model_router.py     # route service to ping the correct llm client as per request
+|   └── file_operations.py  # all operations involving upload and delete
 ```
 
 Components:
@@ -216,7 +45,7 @@ Components:
 - Latency penalty: Latency × 0.4 (weighted 40%)
 - Stability bonus: Stability × 0.25 (weighted 25%, only for hard tasks)
 
-**Hard tasks (higher stability bonus):**
+# llm-router (detailed)
 
 - reasoning
 - planning
