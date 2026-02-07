@@ -2,7 +2,7 @@ from config.model_scores import modelScores
 from config.all_models import model_provider
 from services.score_model import score_model
 
-AUTO = model_provider("A")
+AUTO = model_provider("A").lower()
 
 
 def get_candidate_models(provider_scope: str):
@@ -16,20 +16,18 @@ def get_candidate_models(provider_scope: str):
 
 def rank_models(task_ctx: dict, provider_scope: str):
     candidates = get_candidate_models(provider_scope)
-    ranked = []
-
+    ranked: list[dict] = []
     for models in candidates.values():
         for model_cfg in models.values():
             score = score_model(model_cfg, task_ctx)
-
-            ranked.append({
+            data = {
                 "provider": model_cfg["provider"],
                 "model": model_cfg["model"],
                 "score": score,
-            })
+            }
+            ranked.append(data)
 
     ranked.sort(key=lambda x: x["score"], reverse=True)
-
     if not ranked:
         raise RuntimeError("No eligible models after provider filtering")
 
@@ -39,19 +37,15 @@ def rank_models(task_ctx: dict, provider_scope: str):
     }
 
 
-def select_model(task_ctx: dict, provider_choice: str, model_choice: str):
-    print(f'inside select model function....')
-
-    if provider_choice != AUTO and model_choice != AUTO:
-        print(f'returning non {AUTO} results')
+def select_model(task_ctx: dict, provider_choice: str, model_choice: str) -> float:
+    if provider_choice.lower() != AUTO and model_choice.lower() != AUTO:
         return {
             "provider": provider_choice,
             "model": model_choice,
             "mode": "explicit",
         }
 
-    if provider_choice != AUTO and model_choice == AUTO:
-        print(f'inside non auto provider and auto model choice....')
+    if provider_choice.lower() != AUTO and model_choice.lower() == AUTO:
         result = rank_models(task_ctx, provider_choice)
         return {
             **result["chosen"],
@@ -59,7 +53,6 @@ def select_model(task_ctx: dict, provider_choice: str, model_choice: str):
         }
 
     result = rank_models(task_ctx, AUTO)
-    print(f'going full auto....')
     return {
         **result["chosen"],
         "mode": "full_auto",

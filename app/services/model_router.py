@@ -14,45 +14,35 @@ llm_obj = CurrentLLM()
 def route_to_client(prompt: str, user: str, model: str, instruction: str) -> dict:
     client = llm_obj.getLLM(user)
     response = None
-    print(f'recevied_client: {client}, received_model: {model}, starting prompt preprocessing...')
     preprocessed_dict = preprocess_prompt(prompt=prompt)
-    print('prompt preprocessing done, starting inference...')
     task = infer_task(preprocessed=preprocessed_dict)
-    print('task inference done, starting model ranking...')
-    client = select_model(task, client, model)
-    print('model ranking done...returning response...')
-    response = {
-        "preprocess_results": preprocessed_dict,
-        "task_inferred": task,
-        "client": client
+    task_ctx = {
+        **task,
+        "token_estimate": preprocessed_dict["token_estimate"]
     }
+    result = select_model(task_ctx=task_ctx, provider_choice=client, model_choice=model)
+    client = result.get("provider", None)
+    model = result.get("model", None)
+    if not model or model.lower() == model_provider("A").lower():
+        response = "Could not select model. Try selecting manually"
+        model = None
+        return {
+            "response": response or "No response returned",
+            "provider": client or "Unknown",
+            "model_used": model or "Unknown"
+        }
+    if client == model_provider("M1"):
+        configs = get_configs(client, user)
+        response = query_openai(prompt, model, instruction, temperature=configs.get("temp", 0), top_p=configs.get("top_p", 0), max_output_token=configs.get("max_out_tokens", 0))
+    elif client == model_provider("M2"):
+        configs = get_configs(client, user)
+        response = query_gemini(prompt, model, instruction, temperature=configs.get("temp", 0), top_p=configs.get("top_p", 0), top_k=configs.get("top_k", 0), max_output_token=configs.get("max_out_tokens", 0))
+    else:
+        response = "Select a valid option"
+        model = None
     return {
         "response": response or "No response returned",
-        "model_used": "Unknown"
-    }
-    match client:
-        case model_provider("A"):
-            response = "Auto Mode not ready yet. Try manually selecting the models"
-            model = None
-        case model_provider("M1"):
-            if model.lower() == model_provider("A").lower():
-                response = "Auto Mode not ready yet. Try manually selecting the models"
-                model = None
-            else:
-                configs = get_configs(client, user)
-                response = query_openai(prompt, model, instruction, temperature=configs.get("temp", 0), top_p=configs.get("top_p", 0), max_output_token=configs.get("max_out_tokens", 0))
-        case model_provider("M2"):
-            if model.lower() == model_provider("A").lower():
-                response = "Auto Mode not ready yet. Try manually selecting the models"
-                model = None
-            else:
-                configs = get_configs(client, user)
-                response = query_gemini(prompt, model, instruction, temperature=configs.get("temp", 0), top_p=configs.get("top_p", 0), top_k=configs.get("top_k", 0), max_output_token=configs.get("max_out_tokens", 0))
-        case _:
-            response = "Select a valid client"
-            model = None
-    return {
-        "response": response or "No response returned",
+        "provider": client or "Unknown",
         "model_used": model or "Unknown"
     }
 

@@ -65,14 +65,16 @@ class LLMConfig:
         return 0.0
 
     def userExists(self, user):
-        return self.__class__.llm_settings.get(user, 0) == 0
+        return self.__class__.llm_settings.get(user, 0) != 0
 
     def llmAccess(self, user, llm):
-        return self.__class__.llm_settings[user].get(llm, 0) == 0
+        return self.__class__.llm_settings[user].get(llm, 0) != 0
 
     def setTemperature(self, llm, user, temp=None):
         if temp is None:
             temp = self.getDefaultTemp()
+        if self.__class__.llm_settings[user].get(llm, None) is None:
+            self.__class__.llm_settings[user][llm] = {}
         self.__class__.llm_settings[user][llm][TEMP] = temp
         return self.__class__.llm_settings[user][llm][TEMP]
 
