@@ -1,268 +1,367 @@
-# 🧠 llm-router
+# LLM Router
 
-`llm-router` is a backend application built with FastAPI that allows you to route API requests to different Large Language Models (LLMs) like OpenAI and Gemini, and optionally enhance responses using Retrieval-Augmented Generation (RAG).
+LLM Router is a FastAPI backend that routes prompts to different Large Language Models (LLMs) such as OpenAI and Gemini. It supports manual, semi-automatic, and fully automatic routing, and can optionally enhance responses using Retrieval-Augmented Generation (RAG).
 
----
-
-## 🚀 Features
-
-- 🔁 Route prompts dynamically to OpenAI or Gemini based on input
-- 📄 RAG support with `.txt` and `.pdf` files
-- 🧠 Uses `sentence-transformers` (`all-MiniLM-L6-v2`) for embedding
-- 📂 Upload files through `/upload`, delete via `/clear-data`
-- 📡 Simple `/ask` endpoint to query LLMs with or without RAG
+The system is designed to optimize for usefulness, cost, and reliability, not just raw model capability.
 
 ---
 
-## 📁 Project Structure
+## Core Capabilities
+
+- Dynamic routing across OpenAI and Gemini
+- Three routing modes:
+  - Manual: Provider and model fixed by user
+  - Semi-Auto: Provider fixed, model auto-selected
+  - Full Auto: Provider and model auto-selected
+- Intent-aware task analysis
+- Cost-aware model selection
+- Task quality caps to prevent overpaying for simple tasks
+- RAG support with .txt and .pdf files
+- FastAPI endpoints for /ask, /upload, /clear-data, authentication, and logout
+
+---
+
+## Project Structure
 
 ```
 app/
-├── main.py                 # FastAPI app entrypoint
+├── main.py
 ├── routes/
-│   ├── prompt.py           # /ask endpoint
-│   └── files.py            # /upload and /clear-data
+│   ├── prompt.py
+│   └── files.py
 ├── services/
-│   ├── model_router.py     # routes requests to correct LLM client
-│   ├── file_operations.py  # file save/delete logic
-│   └── rag_engine.py       # RAG embedding & prompt context
-├── data/                   # Holds uploaded .txt and .pdf files
+│   ├── model_router.py
+│   ├── score_model.py
+│   ├── rag_engine.py
+│   └── ...
+├── rag/
+│   ├── embedder.py
+│   ├── retriever.py
+│   └── rag_engine.py
+├── data/
 ```
 
-[//]: # (This README was expanded by automated analysis of the `app/` package to include detailed RAG, routes, and services documentation.)
+---
 
-# 🧠 llm-router (detailed)
+## Routing Modes
 
-This document explains how the FastAPI backend is wired, how the RAG pieces work, the available HTTP routes with request/response shapes, and what each service does.
+### Manual Routing
 
-Summary: `llm-router` routes prompts to either OpenAI or Google Gemini, optionally augments prompt text using Retrieval-Augmented Generation (RAG) from user-uploaded `.txt` and `.pdf` files, and uses a simple token-based authorization flow.
+Provider and model are explicitly selected by the user. No scoring or inference occurs. The request is executed directly with the specified provider and model.
 
-## Checklist (requirements from your request)
-- Analyze `app/` files and extract behavior: Done
-- Document `rag/` usage (embedder, retriever, engine): Done
-- Document `routes/` endpoints with request & response bodies: Done
-- Document `services/` operations and contracts: Done
-- Ignore `utils/` internals (auth relies on `token_store` interface): Done
+### Semi-Auto Routing
 
-## Quick project layout (what matters)
+The provider is fixed by the user (OpenAI or Gemini). The model is automatically selected within that provider only based on scoring analysis.
 
-Relevant files analyzed under `app/`:
+### Full Auto Routing
 
-- `main.py` — FastAPI app, includes routers from `routes/`
-- `rag/embedder.py` — embeddings using `sentence-transformers`
-- `rag/retriever.py` — FAISS-based in-memory retriever
-- `rag/rag_engine.py` — loads files, builds retriever, augments prompts
-- `routes/*.py` — HTTP endpoints (`/start`, `/ask`, `/upload`, `/clear-data`, `/authenticate`, `/logout`)
-- `services/*.py` — LLM client wrappers and helpers (`model_router.py`, `openai_client.py`, `gemini_client.py`, `file_operations.py`, `check_login.py`)
+Both provider and model are automatically selected. All eligible models compete under a unified scoring function.
 
-## Environment variables (complete)
+---
 
-The app reads the following env vars (see `main.py`, `services/*`):
+## Intent-Aware Routing Architecture
 
-- `HOST`, `PORT` — used by `main.py` when running directly
-- `OPENAI_API_KEY` — `app/services/openai_client.py`
-- `GEMINI_API_KEY` — `app/services/gemini_client.py`
-- `DB_API_URI`, `DB_READ` — used by `app/services/check_login.py` to fetch stored credentials
+Routing is split into four layers that work sequentially to determine the best model for a given prompt.
 
-Add these to a `.env` at repository root for local testing.
+---
 
-## RAG (retrieval-augmented generation) — design & usage
+## Layer 1: Prompt Preprocessing
 
-Files involved:
+Extracts observable facts from the prompt without performing inference. This layer analyzes structural properties and generates signals for downstream scoring.
 
-- `app/rag/embedder.py`
-  - Uses `sentence_transformers.SentenceTransformer('all-MiniLM-L6-v2')`.
-  - Exposes `embed_documents(docs: list[str]) -> list[list[float]]` and `embed_query(query: str) -> list[float]`.
+**Outputs include:**
 
-- `app/rag/retriever.py`
-  - Wraps a FAISS `IndexFlatL2` index.
-  - `Retriever.add_documents(embeddings, docs)` stores embeddings in the index and keeps the raw `docs` list in memory.
-  - `Retriever.retrieve(query_embedding, top_k)` returns the top-k document texts (strings).
+- token_estimate: Approximate token count
+- Structural signals: Presence of code, math, questions
+- Intent surface cues: Observable characteristics from the text
+- Length flags: is_short, is_long
 
-- `app/rag/rag_engine.py`
-  - Loads `.txt` and `.pdf` files from `data/<username>/`.
-    - Text files are read directly.
-    - PDFs are read with `fitz` (PyMuPDF) page-by-page.
-  - `build_retriever(username)`:
-    - Loads documents for `username`, computes embeddings with `embed_documents`, creates a `Retriever`, stores it in an in-memory `retriever_cache` keyed by username, and returns it.
-    - Returns `None` if there are no docs for the user.
-  - `augment_prompt_with_context(query, retriever, top_k=1)`:
-    - Embeds the query with `embed_query`, retrieves top_k chunks, joins them with a separator `\n---\n` and returns an augmented prompt of the form:
+**Example:**
 
-      Context:
-      <chunk1>
-      ---
-      <chunk2>
+Prompt: "How come black holes are smaller than the Sun?"
 
-      Question:
-      <original query>
+Derived signals:
+- token_estimate: 11
+- has_question: true
+- is_short: true
 
-    - Also returns a boolean indicating whether RAG context was attached.
+---
 
-Notes and behavior:
+## Layer 2: Task Inference
 
-- RAG supports `.txt` and `.pdf` only.
-- Retriever and embeddings are maintained in-memory per username via `retriever_cache`.
-- After uploading or clearing files, routes explicitly drop the user's `retriever_cache` entry so a new retriever is built on next `/ask` request.
+Determines what kind of thinking the prompt requires. This layer classifies the primary task and identifies any secondary tasks.
 
-Security considerations:
+**Supported task types:**
 
-- Uploaded files are stored under `data/<username>/`. Filenames starting with `.` are ignored.
-- Embeddings and retriever objects live in memory; this repo uses a simple in-process cache without persistence or eviction.
+- quick_answer
+- explanation
+- reasoning
+- summarization
+- code_generation
+- code_debugging
+- planning
+- long_form_writing
 
-## Routes — endpoints, request and response shapes
+**Output example:**
 
-All routes are mounted via `main.py` and defined in `app/routes/`.
-
-1) `GET /start`
-   - Purpose: healthcheck
-   - Request: none
-   - Response (200): {"status": "App is awake"}
-
-2) `POST /ask`
-   - Handler: `app/routes/prompt.py`
-   - Request body (JSON) — Pydantic model `AskRequest`:
-     - `username` (str) — username for which to look up RAG files and to validate token
-     - `prompt` (str) — the user prompt
-     - `client` (str) — "openai" or "gemini" (others return an error-like message)
-     - `model` (str) — model identifier sent to the client wrapper
-     - `top_k` (int, optional) — how many context chunks to retrieve (default: 1)
-     - `use_rag` (bool, optional) — whether to augment the prompt with retrieved context
-   - Required header: `Authorization: Bearer <token>`
-   - Behavior:
-     - Validates token using `token_store.validToken(username, token)` (from `utils/session_store.py`).
-     - Builds or retrieves per-user retriever using `build_retriever(username)`.
-     - If `use_rag` is true and retriever exists, calls `augment_prompt_with_context` to produce an updated prompt.
-     - Calls `services.model_router.route_to_client(updated_prompt, client, model)` and returns the result.
-   - Success response (200):
-     - `{"response": <text>, "model_used": <model or "Unknown">, "rag_used": <true|false>}`
-   - Authorization failure:
-     - 401 JSON: {"msg": "user '<username>' is not authorized"}
-   - Server error (500):
-     - JSON: {"error": "<error string>"}
-
-3) `POST /upload` (multipart/form-data)
-   - Handler: `app/routes/files.py`
-   - Form fields / headers:
-     - `username` (form field) — target user folder
-     - `file` (UploadFile) — `.txt` or `.pdf` file
-     - `Authorization` header (Bearer token)
-   - Behavior:
-     - Validates token as in `/ask`.
-     - Validates extension (only `.txt` and `.pdf` allowed) and size (max 1 MB).
-     - Saves file to `data/<username>/` and removes username from `retriever_cache` so the next `/ask` will rebuild embeddings.
-   - Success response (200):
-     - `{"message": "File saved to <path>"}`
-   - Failure cases:
-     - 400 for invalid file/size
-     - 401 for unauthorized
-     - 500 for unexpected errors
-
-4) `DELETE /clear-data`
-   - Handler: `app/routes/files.py`
-   - Query parameter: `username` (required)
-   - Header: `Authorization: Bearer <token>`
-   - Behavior:
-     - Validates token.
-     - Deletes non-hidden files under `data/<username>/` and clears `retriever_cache` for that user.
-   - Success response (200):
-     - `{"message": "Deleted <N> file(s).", "files": [<filenames>]}`
-
-5) `POST /authenticate`
-   - Handler: `app/routes/authenticate.py`
-   - Request body (JSON): `AuthenticateInterface`
-     - `username` (str)
-     - `password` (str)
-     - `is_user` (bool, default true) — only path currently implemented for users
-     - `ip_value` (str, optional)
-   - Behavior:
-     - Calls `services.check_login.getUser(username, password)` which fetches credential list from `DB_API_URI + DB_READ` and compares.
-     - On success, `getUser` generates a UUID token, stores it via `token_store.addToken`, and returns:
-       - 200 JSON: `{"verification_passed": true, "token": "<uuid>"}`
-     - On failure, returns `{"verification_passed": false, "msg": "<reason>"}` with status 200.
-   - Error: 500 with error details on exceptions.
-
-6) `POST /logout`
-   - Handler: `app/routes/logout.py`
-   - Request body (JSON): `LogoutInterface`:
-     - `username` (str)
-     - `token` (str)
-   - Behavior:
-     - Calls `token_store.deleteToken(username)`.
-     - Returns 200 with `{"logged_out": true}` if deletion succeeded; 202 with `{"logged_out": false}` otherwise.
-
-## Services — what each one does
-
-- `app/services/model_router.py`:
-  - Entrypoint for sending prompts to the selected LLM client.
-  - `route_to_client(prompt, client, model)`:
-    - If `client == "gemini"` calls `services.gemini_client.query_gemini(prompt, model)`.
-    - If `client == "openai"` calls `services.openai_client.query_openai(prompt, model)`.
-    - Otherwise returns `{"response": "Select a valid client", "model_used": "Unknown"}`.
-    - Returns a dictionary with `response` and `model_used`.
-
-- `app/services/openai_client.py`:
-  - Uses `openai.OpenAI(api_key=...)` and calls `client.responses.create(model=model, input=prompt)`.
-  - Returns `response.output_text` or `"[OpenAI Error] <error>"` on failure.
-
-- `app/services/gemini_client.py`:
-  - Uses `google.genai.Client(api_key=...)` and calls `client.models.generate_content(model=model, contents=prompt)`.
-  - Returns `response.text` or `"[Gemini Error] <error>"` on failure.
-
-- `app/services/file_operations.py`:
-  - Saves uploaded files (only `.txt` and `.pdf`) into `data/<username>/`.
-  - Enforces `MAX_SIZE = 1` (MB). If file is larger, raises `ValueError`.
-  - `clear_files(username)` removes non-hidden files and returns a list of deleted filenames.
-
-- `app/services/check_login.py`:
-  - Fetches credentials from an external DB endpoint (`DB_API_URI + DB_READ`).
-  - On matching username/password, generates a UUID token and stores it via `token_store.addToken`.
-  - Returns HTTP responses (FastAPI JSONResponse) with verification status and token on success.
-
-## Operational notes, edge-cases and limitations
-
-- Auth: the app relies on `utils.session_store.token_store` to implement `addToken`, `validToken`, and `deleteToken`. The internal implementation of this store was intentionally excluded from analysis, but all routes rely on it for token-based auth.
-- Uploaded file size limit is 1 MB. This is small for PDFs — you may want to increase `MAX_SIZE` in `app/services/file_operations.py`.
-- RAG pipeline assumes textual chunks fit in memory and does no chunking of large documents; large PDFs can create very large strings which may impact embedding.
-- Retriever uses an in-memory FAISS index; restarting the process clears all indices.
-- `check_login.getUser` performs a full GET of `DB_READ` and then iterates; ensure that endpoint is secure and paginated if large.
-- Error handling: many endpoints return 200 with a JSON failure payload (e.g., authenticate returns 200 with verification_passed=false). Pay attention in client code.
-
-## How to run (short)
-
-1. Create and activate a Python venv (Python 3.10+).
-2. Install dependencies from `app/requirements.txt`.
-3. Create `.env` with required keys: `OPENAI_API_KEY`, `GEMINI_API_KEY`, `DB_API_URI`, `DB_READ`, `HOST`, `PORT` as needed.
-4. Run the app:
-
-```bash
-python app/main.py   # or
-uvicorn app.main:app --reload
+```json
+{
+  "primary_task": "quick_answer",
+  "secondary_tasks": [],
+  "confidence": 1.0
+}
 ```
 
-## Quick examples
+Confidence reflects the certainty of the inference. Higher confidence means the task classification is more reliable.
 
-- Ask without RAG:
+---
 
-Request (POST /ask):
+## Layer 3: Model Scoring and Selection
 
+### 3.1 Model Capability Profiles
+
+Each model has static metadata defining its performance across tasks and operational characteristics.
+
+Example profile:
+
+```json
 {
-  "username": "alice",
-  "prompt": "Summarize the file contents",
-  "client": "openai",
-  "model": "gpt-4o-mini",
-  "use_rag": false
+  "provider": "OpenAI",
+  "model": "gpt-5",
+  "tasks": {
+    "reasoning": 9.5,
+    "quick_answer": 8.4,
+    "code_generation": 9.5
+  },
+  "cost": 3.9,
+  "latency": 3.0,
+  "stability": 8.5,
+  "max_tokens": 200000
 }
+```
 
-Response:
+### 3.2 Task Quality Caps (Diminishing Returns)
 
+Some tasks do not benefit from higher intelligence beyond a certain point. Task quality caps prevent selecting expensive models for tasks that don't require maximum capability.
+
+**Defined caps:**
+
+```
+quick_answer: 7.0
+summarization: 7.5
+explanation: 8.0
+code_generation: 8.5
+code_debugging: 9.0
+reasoning: 9.5
+planning: 9.5
+long_form_writing: 9.0
+```
+
+**Effective task score calculation:**
+
+```
+effective_task_score = min(model_task_score, task_quality_cap)
+```
+
+This prevents selecting high-cost models for simple tasks. For example, if a quick answer task is routed to GPT-5 (score 9.5), the effective score is capped at 7.0, making it ineligible unless no other options exist.
+
+### 3.3 Cost Sensitivity (Contextual Cost Awareness)
+
+Cost penalties scale based on task difficulty, prompt size, and inference certainty. Cost sensitivity adjusts the weight of cost in the final scoring function.
+
+**Cost sensitivity factor calculation:**
+
+```
+cost_factor = 2.5   if task == quick_answer and tokens < 100
+            = 1.8   if tokens < 300
+            = 0.8   if confidence < 0.5
+            = 1.0   otherwise
+```
+
+When confidence is low, cost becomes less of a penalty factor. When a task is simple (quick_answer) and the prompt is short (< 100 tokens), cost sensitivity increases to 2.5, strongly discouraging expensive models.
+
+### 3.4 Final Scoring Formula
+
+For each eligible model, a composite score is calculated:
+
+**Base score:**
+
+```
+base_score = 2 × effective_primary_task_score
+           + 0.5 × sum(secondary_task_scores)
+```
+
+The primary task is weighted twice to reflect its importance. Secondary tasks contribute half as much.
+
+**Confidence-scaled score:**
+
+```
+confidence_scaled_score = base_score × (0.5 + confidence)
+```
+
+A confidence value of 0.5 (low) multiplies the base score by 1.0. A confidence value of 1.0 (high) multiplies by 1.5, boosting the score.
+
+**Final score:**
+
+```
+final_score = confidence_scaled_score
+            - (cost × 0.6 × cost_factor)
+            - (latency × 0.4)
+            + (stability × 0.25)
+```
+
+Components:
+- Confidence-scaled score: Primary capability measure
+- Cost penalty: Cost × 0.6 × cost_factor (weighted 60%)
+- Latency penalty: Latency × 0.4 (weighted 40%)
+- Stability bonus: Stability × 0.25 (weighted 25%, only for hard tasks)
+
+**Hard tasks (higher stability bonus):**
+
+- reasoning
+- planning
+- code_debugging
+
+For these tasks, stability contributes more to the final score.
+
+**Context window guard:**
+
+```
+if token_estimate > max_tokens:
+    model is disqualified
+```
+
+Models with insufficient context windows are automatically excluded.
+
+### 3.5 Ranking and Selection
+
+Models are ranked only within the allowed scope:
+
+- Full Auto: All available models compete
+- Semi-Auto: Only models from the selected provider
+- Manual: No ranking; model is fixed
+
+The highest-scoring model is selected.
+
+**Result example:**
+
+```json
 {
-  "response": "...",
-  "model_used": "gpt-4o-mini",
-  "rag_used": false
+  "provider": "OpenAI",
+  "model": "gpt-5-mini",
+  "mode": "full_auto",
+  "score": 8.34,
+  "reasoning": "Cost-effective for task type"
 }
+```
 
-- Ask with RAG (after uploading files for `alice`):
+---
 
-Set `use_rag: true` and optionally `top_k: 2`. The server will build or reuse a retriever for `alice` and prepend context to the prompt.
+## Layer 4: Execution
 
+The routing decision is dispatched to the appropriate execution layer.
+
+**Execution routing:**
+
+- OpenAI models: query_openai()
+- Gemini models: query_gemini()
+
+The routing engine never executes models directly. It only produces decisions, which are consumed by execution functions.
+
+---
+
+## Retrieval-Augmented Generation (RAG)
+
+RAG enhances responses by retrieving relevant context from uploaded documents before generating answers.
+
+**RAG components:**
+
+- Embedder: sentence-transformers/all-MiniLM-L6-v2
+- Retriever: FAISS-based in-memory retriever (per user)
+- Supported formats: .txt and .pdf files
+
+**RAG workflow:**
+
+1. User uploads documents (.txt or .pdf)
+2. Documents are embedded and indexed in a user-specific FAISS database
+3. When use_rag=true in a request, the prompt is used to retrieve relevant document snippets
+4. Retrieved context is prepended to the prompt before sending to the selected model
+5. The model generates a response informed by the retrieved documents
+
+**Cache invalidation:**
+
+The retriever cache is invalidated when:
+- New files are uploaded
+- Files are deleted
+- User data is cleared
+
+---
+
+## Routes and Endpoints
+
+All existing routes remain unchanged:
+
+- POST /ask: Submit a prompt and receive a response
+- POST /upload: Upload documents for RAG
+- DELETE /clear-data: Clear all user data
+- POST /authenticate: Authenticate user
+- POST /logout: Logout user
+
+**Request payload example (/ask):**
+
+```json
+{
+  "prompt": "How does photosynthesis work?",
+  "mode": "full_auto",
+  "use_rag": false,
+  "provider": null,
+  "model": null
+}
+```
+
+**Response example:**
+
+```json
+{
+  "response": "Photosynthesis is a process...",
+  "provider": "Gemini",
+  "model": "gemini-2.5-pro",
+  "routing_mode": "full_auto",
+  "task_inferred": "explanation",
+  "confidence": 0.95,
+  "tokens_used": 245,
+  "cost_estimate": 0.12
+}
+```
+
+---
+
+## Design Principles
+
+1. Scoring functions return scalar values (single numeric scores)
+2. Decision functions return structured choices (provider, model, reasoning)
+3. Execution functions perform side effects only (no decision-making)
+4. Intelligence is budgeted, not maximized (cost is a first-class concern)
+5. Transparency: All routing decisions include reasoning and metadata
+
+---
+
+## Current Implementation Status
+
+- Intent-aware routing: Implemented
+- Cost-aware auto mode: Implemented
+- Task quality caps: Implemented
+- Full/semi/manual routing: Implemented
+- RAG integration: Implemented
+- Metadata and observability: Implemented
+
+---
+
+## Future Extensions
+
+- Memory for better context, Feedback-driven weight tuning
+- Tools and Agents
+- Local LLM connection
+- Model performance tracking (monitor actual performance vs predicted)
+- A/B testing framework (compare routing strategies)
+- Usage analytics and cost reporting
