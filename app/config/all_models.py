@@ -5,7 +5,7 @@ def model_provider(id):
         case "M1":
             return "OpenAI"
         case "M2":
-            return "Gemini"
+            return "Google"
         case _:
             return None
 
@@ -37,8 +37,7 @@ def available_models():
             "LIST": [
                 {"model": "Auto"},
                 {"model": "gemini-2.5-flash-lite"},
-                {"model": "gemini-2.5-flash"},
-                {"model": "gemini-2.5-pro"}
+                {"model": "gemini-2.5-flash"}
             ]
         }
     }

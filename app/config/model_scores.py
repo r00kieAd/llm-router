@@ -133,24 +133,6 @@ def modelScores():
                 "latency": 0.8,
                 "cost": 1.2,
                 "stability": 7.6
-            },
-            "gemini-2.5-pro": {
-                "provider": GEMINI,
-                "model": "gemini-2.5-pro",
-                "tasks": {
-                    "reasoning": 7.7,
-                    "code_generation": 7.7,
-                    "code_debugging": 7.7,
-                    "planning": 7.7,
-                    "summarization": 9.9,
-                    "quick_answer": 9.9,
-                    "explanation": 8.8,
-                    "long_form_writing": 8.8
-                },
-                "max_tokens": 200000,
-                "latency": 1.8,
-                "cost": 3.0,
-                "stability": 7.6
             }
         }
     }
