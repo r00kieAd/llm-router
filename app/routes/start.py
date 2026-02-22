@@ -15,4 +15,5 @@ async def start_app():
             return {"status": "App is awake. DB server active."}
         raise HTTPException(status_code=500, detail="DB server unreachable")
     except Exception as e:
+        print(f'exception: {e}')
         raise HTTPException(status_code=500, detail=str(e))
