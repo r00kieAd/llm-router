@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 load_dotenv()
 app = FastAPI()
 
-cors_env = os.getenv("CORS_ALLOWED_ORIGINS", "")
+cors_env = os.getenv("CORS_ALLOWED_ORIGINS", "*")
 if cors_env:
     allow_origins = [o.strip() for o in cors_env.split(",") if o.strip()]
 else:
