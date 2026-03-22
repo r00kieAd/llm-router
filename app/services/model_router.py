@@ -1,5 +1,5 @@
-from services.gemini_client import query_gemini
-from services.openai_client import query_openai
+from services.gemini_client import query_gemini_stream
+from services.openai_client import query_openai_stream
 from config.current_llm import CurrentLLM
 from config.llm_config import LLMConfig
 from config.all_models import model_provider
@@ -33,15 +33,16 @@ def route_to_client(prompt: str, user: str, model: str, instruction: str) -> dic
         }
     if client == model_provider("M1"):
         configs = get_configs(client, user)
-        response = query_openai(prompt, model, instruction, temperature=configs.get("temp", 0), top_p=configs.get("top_p", 0), max_output_token=configs.get("max_out_tokens", 0))
+        response = query_openai_stream(prompt, model, instruction, temperature=configs.get("temp", 0), top_p=configs.get("top_p", 0), max_output_token=configs.get("max_out_tokens", 0))
     elif client == model_provider("M2"):
         configs = get_configs(client, user)
-        response = query_gemini(prompt, model, instruction, temperature=configs.get("temp", 0), top_p=configs.get("top_p", 0), top_k=configs.get("top_k", 0), max_output_token=configs.get("max_out_tokens", 0))
+        response = query_gemini_stream(prompt, model, instruction, temperature=configs.get("temp", 0), top_p=configs.get("top_p", 0), top_k=configs.get("top_k", 0), max_output_token=configs.get("max_out_tokens", 0))
     else:
         response = "Select a valid option"
         model = None
     return {
-        "response": response or "No response returned",
+        # "response": response or "No response returned",
+        "response": response,
         "provider": client or "Unknown",
         "model_used": model or "Unknown"
     }
