@@ -56,7 +56,7 @@ class LLMConfig:
             return 1
 
     def getDefaultMaxOutputTokens(self):
-        return 1024
+        return 8126
 
     def getDefaultFreqPenalty(self):
         return 0.0

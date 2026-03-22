@@ -19,8 +19,8 @@ class LLMSettingsRequest(BaseModel):
     top_p: float
     top_k: float
     output_tokens: int
-    freq_penalty: float
-    presence_penalty: float
+    freq_penalty: float = None
+    presence_penalty: float = None
 
 
 @settings_router.post("/update_llm_choice")
