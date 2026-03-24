@@ -90,7 +90,17 @@ async def ask(payload: AskRequest, connection: Request, authorization: str = Hea
                 finally:
                     active_streams.pop(stream_id, None)
 
-            return StreamingResponse(stream_wrapper(), media_type="text/event-stream")
+            # return StreamingResponse(stream_wrapper(), media_type="text/event-stream")
+            return StreamingResponse(
+                stream_wrapper(),
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive",
+                    "X-Accel-Buffering": "no",
+                    "Transfer-Encoding": "chunked"
+                }
+            )
 
         return JSONResponse(content=res)
     except Exception as e:
