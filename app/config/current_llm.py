@@ -15,7 +15,7 @@ class CurrentLLM:
         return self.__class__.user_choice.get(user, None)
     
     def removeLLM(self, user):
-        if self.getLLM(user) is not None:
+        if self.getLLM(user=user) is not None:
             del self.__class__.user_choice[user]
         return True
 

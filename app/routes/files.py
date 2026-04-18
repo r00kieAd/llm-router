@@ -18,7 +18,7 @@ async def upload_file(username: str = Form(...), authorization: str = Header(Non
 
         path = save_file(file, username)
         retriever_cache.pop(username, None)
-        return {"message": f"File saved to {path}"}
+        return {"message": f"File uploaded"}
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:

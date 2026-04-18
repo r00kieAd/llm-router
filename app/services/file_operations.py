@@ -2,7 +2,7 @@ import os
 from fastapi import UploadFile
 
 
-ALLOWED_EXTENSIONS = ('.txt', '.pdf')
+ALLOWED_EXTENSIONS = ('.txt', '.pdf', '.md')
 UPLOAD_DIR = os.path.join(os.getcwd(), "data")
 MAX_SIZE = 1
 

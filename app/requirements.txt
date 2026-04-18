@@ -5,8 +5,7 @@ PyMuPDF
 python-multipart
 openai
 google-genai
-sentence-transformers
-faiss-cpu
 requests
 pydantic
 httpx
+mistralai
