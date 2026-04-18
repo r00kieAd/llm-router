@@ -12,7 +12,7 @@ The system is designed to optimize for usefulness, cost, and reliability, not ju
 
 -  Route prompts dynamically to OpenAI or Gemini based on input
 -  RAG support with `.txt` and `.pdf` files
--  Uses `sentence-transformers` (`all-MiniLM-L6-v2`) for embedding
+-  Embeddings via Mistral API with cosine similarity retrieval
 -  Upload files through `/upload`, delete via `/clear-data`
 -  Simple `/ask` endpoint to query LLMs with or without RAG
 
