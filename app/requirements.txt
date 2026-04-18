@@ -9,3 +9,4 @@ requests
 pydantic
 httpx
 mistralai
+numpy
