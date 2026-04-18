@@ -9,7 +9,7 @@ router = APIRouter()
 @router.get("/start")
 async def start_app():
     try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        async with httpx.AsyncClient(timeout=90.0) as client:
             res = await client.get(os.getenv("DB_API_URI"))
         if 200 <= res.status_code < 300:
             return {"status": "App is awake. DB server active."}

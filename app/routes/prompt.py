@@ -45,9 +45,11 @@ async def ask(payload: AskRequest, connection: Request, authorization: str = Hea
         if authorized == "err":
             return JSONResponse(status_code=500, content={"msg": f"unable to verify user '{payload.username}'"})
 
-        retriever = build_retriever(payload.username)
+        retriever = None
 
         if payload.use_rag:
+            retriever = build_retriever(payload.username)
+            print(f'using rag: {payload.use_rag}')
             updated_prompt, rag_used = augment_prompt_with_context(payload.prompt, retriever, top_k=payload.top_k)
         else:
             updated_prompt = payload.prompt
