@@ -133,6 +133,24 @@ def modelScores():
                 "latency": 0.8,
                 "cost": 1.2,
                 "stability": 7.6
+            },
+            "gemini-3.1-flash-lite-preview": {
+                "provider": GEMINI,
+                "model": "gemini-3.1-flash-lite-preview",
+                "tasks": {
+                    "reasoning": 6.8,
+                    "code_generation": 6.8,
+                    "code_debugging": 6.8,
+                    "planning": 6.8,
+                    "summarization": 8.6,
+                    "quick_answer": 8.6,
+                    "explanation": 7.6,
+                    "long_form_writing": 7.6
+                },
+                "max_tokens": 1000000,
+                "latency": 0.3,
+                "cost": 0.8,
+                "stability": 7.9
             }
         }
     }

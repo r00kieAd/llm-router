@@ -4,12 +4,14 @@ from pydantic import BaseModel
 from services.model_router import route_to_client
 from rag.rag_engine import build_retriever, augment_prompt_with_context
 from utils.session_store import token_store
+from services.manage_memory import mem_instance
 from uuid import uuid4
 import inspect
 import json
 
 router = APIRouter()
 active_streams: dict[str, bool] = {}
+mem = mem_instance
 
 
 class AskRequest(BaseModel):
@@ -46,13 +48,16 @@ async def ask(payload: AskRequest, connection: Request, authorization: str = Hea
             return JSONResponse(status_code=500, content={"msg": f"unable to verify user '{payload.username}'"})
 
         retriever = None
+        updated_prompt = None
+        mem_updated, context = mem.add_new_prompt(prompt=payload.prompt, username=payload.username)
+        full_response = [] 
 
         if payload.use_rag:
             retriever = build_retriever(payload.username)
-            print(f'using rag: {payload.use_rag}')
             updated_prompt, rag_used = augment_prompt_with_context(payload.prompt, retriever, top_k=payload.top_k)
+            updated_prompt = f"{updated_prompt}\n{context}" if mem_updated else updated_prompt
         else:
-            updated_prompt = payload.prompt
+            updated_prompt = payload.prompt if not mem_updated else context
             rag_used = False
 
         res = route_to_client(updated_prompt, payload.username, payload.model, payload.instruction)
@@ -83,6 +88,8 @@ async def ask(payload: AskRequest, connection: Request, authorization: str = Hea
                         text_chunk = chunk if chunk is not None else ""
                         if isinstance(text_chunk, dict):
                             text_chunk = json.dumps(text_chunk)
+                        
+                        full_response.append(str(text_chunk))
                         yield _encode_sse(str(text_chunk))
 
                     if active_streams.get(stream_id):
@@ -91,6 +98,7 @@ async def ask(payload: AskRequest, connection: Request, authorization: str = Hea
                     yield _encode_sse(json.dumps({"error": str(exc)}), event="error")
                 finally:
                     active_streams.pop(stream_id, None)
+                    mem.add_new_response(res=full_response, username=payload.username)
 
             # return StreamingResponse(stream_wrapper(), media_type="text/event-stream")
             return StreamingResponse(
@@ -103,7 +111,9 @@ async def ask(payload: AskRequest, connection: Request, authorization: str = Hea
                     "Transfer-Encoding": "chunked"
                 }
             )
-
+        
+        if not _is_streamable(response_payload):
+            mem.add_new_response(res=[str(response_payload)], username=payload.username)
         return JSONResponse(content=res)
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})

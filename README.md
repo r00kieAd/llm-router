@@ -11,10 +11,12 @@ The system is designed to optimize for usefulness, cost, and reliability, not ju
 ## Features
 
 -  Route prompts dynamically to OpenAI or Gemini based on input
--  RAG support with `.txt` and `.pdf` files
+-  RAG support with `.txt`, `.md` and `.pdf` files
 -  Embeddings via Mistral API with cosine similarity retrieval
 -  Upload files through `/upload`, delete via `/clear-data`
 -  Simple `/ask` endpoint to query LLMs with or without RAG
+-  2-turn conversation memory per user for context awareness
+-  2-turn conversation memory per user for context awareness
 
 ---
 
@@ -97,6 +99,20 @@ The routing decision is dispatched to the appropriate execution layer.
 
 The routing engine never executes models directly. It only produces decisions, which are consumed by execution functions.
 
+**Available models:**
+
+- OpenAI: gpt-4.1, gpt-5, gpt-5-nano, gpt-5-mini, gpt-4.1-mini
+- Google: gemini-2.5-flash-lite, gemini-2.5-flash, gemini-3.1-flash-lite-preview
+- Auto mode: System selects optimal model based on task
+
+**Conversation Memory:**
+
+The system maintains a 2-turn memory per user that tracks:
+- Current user prompt
+- Previous user prompt and assistant response
+
+This context is passed to the routing engine and models for improved coherence in multi-turn conversations.
+
 ---
 
 ## Retrieval-Augmented Generation (RAG)
@@ -105,15 +121,15 @@ RAG enhances responses by retrieving relevant context from uploaded documents be
 
 **RAG components:**
 
-- Embedder: sentence-transformers/all-MiniLM-L6-v2
-- Retriever: FAISS-based in-memory retriever (per user)
-- Supported formats: .txt and .pdf files
+- Embedder: Mistral API (mistral-embed model)
+- Retriever: Cosine similarity-based in-memory retriever (per user)
+- Supported formats: .txt, .md, and .pdf files
 
 **RAG workflow:**
 
-1. User uploads documents (.txt or .pdf)
-2. Documents are embedded and indexed in a user-specific FAISS database
-3. When use_rag=true in a request, the prompt is used to retrieve relevant document snippets
+1. User uploads documents (.txt, .md, or .pdf)
+2. Documents are embedded using Mistral API and indexed in a user-specific retriever
+3. When use_rag=true in a request, the prompt is used to retrieve relevant document snippets via cosine similarity
 4. Retrieved context is prepended to the prompt before sending to the selected model
 5. The model generates a response informed by the retrieved documents
 
@@ -144,7 +160,31 @@ All existing routes remain unchanged:
   "mode": "full_auto",
   "use_rag": false,
   "provider": null,
-  "model": null
+  "model": null,
+  "username": "user123"
+}
+```
+
+**Available models and providers:**
+
+- Auto (A): Full Auto - System selects optimal model across all providers
+- OpenAI (M1): gpt-4.1, gpt-5, gpt-5-nano, gpt-5-mini, gpt-4.1-mini
+- Google (M2): gemini-2.5-flash-lite, gemini-2.5-flash, gemini-3.1-flash-lite-preview
+
+**Request modes:**
+
+- full_auto: System automatically selects best model and provider
+- semi_auto: Select provider (M1 or M2), system picks best model
+- manual: Specify both provider and model
+
+**RAG-enabled request example:**
+
+```json
+{
+  "prompt": "What is mentioned about project timeline?",
+  "mode": "full_auto",
+  "use_rag": true,
+  "username": "user123"
 }
 ```
 
@@ -153,8 +193,8 @@ All existing routes remain unchanged:
 ```json
 {
   "response": "Photosynthesis is a process...",
-  "provider": "Gemini",
-  "model": "gemini-2.5-pro",
+  "provider": "Google",
+  "model": "gemini-2.5-flash",
   "routing_mode": "full_auto",
   "task_inferred": "explanation",
   "confidence": 0.95,
@@ -188,7 +228,7 @@ All existing routes remain unchanged:
 
 ## Future Extensions
 
-- Memory for better context, Feedback-driven weight tuning
+- Feedback-driven weight tuning
 - Tools and Agents
 - Local LLM connection
 - Model performance tracking (monitor actual performance vs predicted)
