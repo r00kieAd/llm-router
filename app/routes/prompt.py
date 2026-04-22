@@ -41,6 +41,7 @@ def _encode_sse(payload: str, event: str | None = None) -> str:
 @router.post("/ask")
 async def ask(payload: AskRequest, connection: Request, authorization: str = Header(None)):
     try:
+        print(payload)
         authorized = authorizationCheck(payload.username, authorization)
         if not authorized:
             return JSONResponse(status_code=401, content={"msg": f"user '{payload.username}' is not authorized"})
