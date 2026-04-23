@@ -10,15 +10,26 @@ router = APIRouter()
 @router.get("/start")
 async def start_app():
     try:
-        await asyncio.sleep(5)
+        print("pinging db server")
+        await asyncio.sleep(8)
+
         async with httpx.AsyncClient(http2=False, timeout=90.0) as client:
-            res = await client.get(os.getenv("DB_API_URI"),
-            headers={
-                "User-Agent": "llm-router-service",
-                "Accept": "*/*"
-        })
-        if 200 <= res.status_code < 300:
-            return {"status": "App is awake. DB server active."}
+            for i in range(3):
+                res = await client.get(
+                    os.getenv("DB_API_URI"),
+                    headers={
+                        "User-Agent": "llm-router-service",
+                        "Accept": "*/*"
+                    }
+                )
+
+                print("Response:", res.status_code, res.text)
+
+                if res.status_code < 429:
+                    break
+
+                await asyncio.sleep(2 * (i + 1))
+                
         return JSONResponse(status_code=res.status_code, content={"detail": res.text})
     except httpx.ConnectTimeout:
         raise HTTPException(status_code=504, detail="Connection Timeout")

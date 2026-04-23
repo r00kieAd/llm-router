@@ -1,5 +1,6 @@
 from services.gemini_client import query_gemini_stream
 from services.openai_client import query_openai_stream
+from services.mistral_client import query_mistral_stream
 from config.current_llm import CurrentLLM
 from config.llm_config import LLMConfig
 from config.all_models import model_provider
@@ -37,6 +38,9 @@ def route_to_client(prompt: str, user: str, model: str, instruction: str) -> dic
     elif client == model_provider("M2"):
         configs = get_configs(client, user)
         response = query_gemini_stream(prompt, model, instruction, temperature=configs.get("temp", 0), top_p=configs.get("top_p", 0), top_k=configs.get("top_k", 0), max_output_token=configs.get("max_out_tokens", 0))
+    elif client == model_provider("M3"):
+        configs = get_configs(client, user)
+        response = query_mistral_stream(prompt, model, instruction, temperature=configs.get("temp", 0), top_p=configs.get("top_p", 0), max_output_token=configs.get("max_out_tokens", 0))
     else:
         response = "Select a valid option"
         model = None
