@@ -35,8 +35,9 @@ app/
 │   └── files.py            # /upload and /clear-data are routed accordingly to file_operaitons.py
 |   └── start.py            # app run confirm
 ├── services/
-│   ├── gemini_client.py    # sends generated prompt to gemini and returns the response
-│   ├── openai_client.py    # sends generated prompt to openai and returns the response
+│   ├── gemini_client.py    # sends generated prompt to gemini and streams the response
+│   ├── openai_client.py    # sends generated prompt to openai and streams the response
+|   |__ mistral_client.py   # sends generated prompt to mistral and streams the response
 │   └── model_router.py     # route service to ping the correct llm client as per request
 |   └── file_operations.py  # all operations involving upload and delete
 ```
@@ -103,6 +104,7 @@ The routing engine never executes models directly. It only produces decisions, w
 
 - OpenAI: gpt-4.1, gpt-5, gpt-5-nano, gpt-5-mini, gpt-4.1-mini
 - Google: gemini-2.5-flash-lite, gemini-2.5-flash, gemini-3.1-flash-lite-preview
+- Mistral: open-mistral-nemo, labs-leanstral-2603, mistral-large-2512, mistral-medium-2505, ministral-3b-2512
 - Auto mode: System selects optimal model based on task
 
 **Conversation Memory:**
