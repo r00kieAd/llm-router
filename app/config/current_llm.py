@@ -3,6 +3,7 @@ from config.all_models import model_provider
 AUTO = model_provider("A")
 OPENAI = model_provider("M1")
 GEMINI = model_provider("M2")
+MISTRAL = model_provider("M3")
 
 class CurrentLLM:
     user_choice = {}

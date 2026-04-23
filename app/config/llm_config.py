@@ -3,6 +3,7 @@ from config.all_models import model_provider
 
 OPENAI = model_provider("M1")
 GEMINI = model_provider("M2")
+MISTRAL = model_provider("M3")
 LLM = 'llm'
 TEMP = 'temp'
 TOPP = 'top_p'
