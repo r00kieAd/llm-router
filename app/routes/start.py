@@ -3,13 +3,15 @@ from dotenv import load_dotenv
 from fastapi.responses import JSONResponse
 import httpx, os, traceback
 import asyncio
+from pathlib import Path
 
-load_dotenv()
+load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
 router = APIRouter()
 
 @router.get("/start")
 async def start_app():
     try:
+        return JSONResponse(status_code=200, content={"detail": "bypassed"})
         print("pinging db server")
         await asyncio.sleep(8)
 
