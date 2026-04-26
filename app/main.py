@@ -2,8 +2,9 @@ from fastapi import FastAPI
 from dotenv import load_dotenv
 import os, uvicorn
 from fastapi.middleware.cors import CORSMiddleware
+from pathlib import Path
 
-load_dotenv()
+load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
 app = FastAPI()
 
 cors_env = os.getenv("CORS_ALLOWED_ORIGINS", "*")
@@ -40,6 +41,5 @@ if __name__ == "__main__":
     host = os.getenv("HOST")
     port = int(os.getenv("PORT"))
     uvicorn.run("main:app", host=host, port=port, reload=False)
-
 
 
