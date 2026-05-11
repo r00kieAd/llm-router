@@ -13,7 +13,8 @@ llm_obj = CurrentLLM()
 
 
 def route_to_client(prompt: str, user: str, model: str, instruction: str) -> dict:
-    client = llm_obj.getLLM(user)
+    client = llm_obj.getLLM(user) or model_provider("A")
+    model = model or model_provider("A")
     response = None
     preprocessed_dict = preprocess_prompt(prompt=prompt)
     task = infer_task(preprocessed=preprocessed_dict)
@@ -53,6 +54,9 @@ def route_to_client(prompt: str, user: str, model: str, instruction: str) -> dic
 
 
 def get_configs(client, user):
+    if not config_obj.userExists(user) or not config_obj.llmAccess(user, client):
+        config_obj.setUserConfig(user=user, llm=client)
+
     return {
         "temp": config_obj.getTemperature(llm=client, user=user),
         "top_p": config_obj.getTopP(llm=client, user=user),
