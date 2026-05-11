@@ -38,6 +38,9 @@ def rank_models(task_ctx: dict, provider_scope: str):
 
 
 def select_model(task_ctx: dict, provider_choice: str, model_choice: str) -> float:
+    provider_choice = provider_choice or model_provider("A")
+    model_choice = model_choice or model_provider("A")
+
     if provider_choice.lower() != AUTO and model_choice.lower() != AUTO:
         return {
             "provider": provider_choice,

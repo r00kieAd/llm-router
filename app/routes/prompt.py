@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, Header
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 from services.model_router import route_to_client
+from services.web_search_agent import enrich_prompt_with_web
 from rag.rag_engine import build_retriever, augment_prompt_with_context
 from utils.session_store import token_store
 from services.manage_memory import mem_instance
@@ -21,6 +22,7 @@ class AskRequest(BaseModel):
     instruction: str
     use_rag: bool = False
     top_k: int = 3
+    use_web: bool = False
 
 
 class StopRequest(BaseModel):
@@ -41,7 +43,7 @@ def _encode_sse(payload: str, event: str | None = None) -> str:
 @router.post("/ask")
 async def ask(payload: AskRequest, connection: Request, authorization: str = Header(None)):
     try:
-        print(payload)
+        # print(payload)
         authorized = authorizationCheck(payload.username, authorization)
         if not authorized:
             return JSONResponse(status_code=401, content={"msg": f"user '{payload.username}' is not authorized"})
@@ -61,8 +63,13 @@ async def ask(payload: AskRequest, connection: Request, authorization: str = Hea
             updated_prompt = payload.prompt if not mem_updated else context
             rag_used = False
 
+        web_metadata = {"web_used": False}
+        if payload.use_web:
+            updated_prompt, web_metadata = enrich_prompt_with_web(updated_prompt)
+
         res = route_to_client(updated_prompt, payload.username, payload.model, payload.instruction)
         res["rag_used"] = rag_used
+        res.update(web_metadata)
         response_payload = res.get("response")
 
         if _is_streamable(response_payload):
@@ -75,7 +82,10 @@ async def ask(payload: AskRequest, connection: Request, authorization: str = Hea
                     metadata = json.dumps({
                         "provider": res.get("provider"),
                         "model_used": res.get("model_used"),
-                        "rag_used": rag_used
+                        "rag_used": rag_used,
+                        "web_used": web_metadata.get("web_used", False),
+                        "web_tool": web_metadata.get("web_tool"),
+                        "web_sources": web_metadata.get("web_sources", [])
                     })
                     yield _encode_sse(metadata, event="metadata")
 
