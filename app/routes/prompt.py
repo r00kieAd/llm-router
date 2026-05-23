@@ -65,7 +65,7 @@ async def ask(payload: AskRequest, connection: Request, authorization: str = Hea
 
         web_metadata = {"web_used": False}
         if payload.use_web:
-            updated_prompt, web_metadata = enrich_prompt_with_web(updated_prompt)
+            updated_prompt, web_metadata = enrich_prompt_with_web(updated_prompt, raw_prompt=payload.prompt)
 
         res = route_to_client(updated_prompt, payload.username, payload.model, payload.instruction)
         res["rag_used"] = rag_used
@@ -84,6 +84,7 @@ async def ask(payload: AskRequest, connection: Request, authorization: str = Hea
                         "model_used": res.get("model_used"),
                         "rag_used": rag_used,
                         "web_used": web_metadata.get("web_used", False),
+                        "web_query": web_metadata.get("web_query"),
                         "web_tool": web_metadata.get("web_tool"),
                         "web_sources": web_metadata.get("web_sources", [])
                     })
