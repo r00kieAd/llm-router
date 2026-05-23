@@ -13,6 +13,15 @@ TOOLS = {
 
 TOOL_SELECTION_MODEL = "open-mistral-nemo"
 
+_QUERY_REFINEMENT_INSTRUCTION = """Create one concise web search query from the user's request.
+Rules:
+- Return only the query text.
+- Preserve any URLs exactly as written.
+- Remove roleplay, style, tone, and formatting instructions.
+- Keep important entities, dates, constraints, and question intent.
+- Do not answer the question.
+"""
+
 _SELECTION_INSTRUCTION = """You select exactly one Tavily tool for a web agent.
 Return only valid JSON with this shape:
 {"tool": "search|extract|crawl", "args": {...}, "reason": "..."}
@@ -29,7 +38,22 @@ Argument rules:
 """
 
 
-def select_tool(query: str) -> dict[str, Any]:
+def refine_query(raw_prompt: str) -> str:
+    raw = "".join(
+        query_mistral_stream(
+            prompt=f"User request:\n{raw_prompt}\n\nWeb search query:",
+            model=TOOL_SELECTION_MODEL,
+            instruction=_QUERY_REFINEMENT_INSTRUCTION,
+            temperature=0,
+            top_p=1,
+            max_output_token=120,
+        )
+    )
+    refined = _clean_query(raw)
+    return refined or raw_prompt
+
+
+def select_tool(query: str, raw_prompt: str | None = None) -> dict[str, Any]:
     prompt = f"User request:\n{query}\n\nSelect the best Tavily tool."
     raw = "".join(
         query_mistral_stream(
@@ -43,16 +67,18 @@ def select_tool(query: str) -> dict[str, Any]:
     )
 
     selection = _parse_selection(raw)
-    return _normalize_selection(selection, query)
+    return _normalize_selection(selection, query, raw_prompt=raw_prompt)
 
 
-def run_selected_tool(query: str) -> dict[str, Any]:
-    selection = select_tool(query)
+def run_selected_tool(raw_prompt: str) -> dict[str, Any]:
+    query = refine_query(raw_prompt)
+    selection = select_tool(query, raw_prompt=raw_prompt)
     tool_name = selection["tool"]
     args = selection["args"]
     result = TOOLS[tool_name](**args)
 
     return {
+        "query": query,
         "tool": tool_name,
         "args": args,
         "reason": selection.get("reason"),
@@ -73,7 +99,7 @@ def _parse_selection(raw: str) -> dict[str, Any]:
             return {}
 
 
-def _normalize_selection(selection: dict[str, Any], query: str) -> dict[str, Any]:
+def _normalize_selection(selection: dict[str, Any], query: str, raw_prompt: str | None = None) -> dict[str, Any]:
     tool = selection.get("tool")
     if tool not in TOOLS:
         tool = "search"
@@ -82,11 +108,11 @@ def _normalize_selection(selection: dict[str, Any], query: str) -> dict[str, Any
     if not isinstance(args, dict):
         args = {}
 
-    urls = _extract_urls(query)
+    urls = _extract_urls(f"{raw_prompt or ''}\n{query}")
     if tool == "extract":
         normalized_args = {
             "urls": args.get("urls") or urls,
-            "query": args.get("query") or query,
+            "query": query,
         }
         if not normalized_args["urls"]:
             tool = "search"
@@ -95,7 +121,7 @@ def _normalize_selection(selection: dict[str, Any], query: str) -> dict[str, Any
     elif tool == "crawl":
         normalized_args = {
             "url": args.get("url") or (urls[0] if urls else None),
-            "instructions": args.get("instructions") or query,
+            "instructions": query,
         }
         if not normalized_args["url"]:
             tool = "search"
@@ -104,7 +130,7 @@ def _normalize_selection(selection: dict[str, Any], query: str) -> dict[str, Any
     else:
         tool = "search"
         args = {
-            "query": args.get("query") or query,
+            "query": query,
             "max_results": _safe_max_results(args.get("max_results")),
         }
 
@@ -117,6 +143,16 @@ def _normalize_selection(selection: dict[str, Any], query: str) -> dict[str, Any
 
 def _extract_urls(text: str) -> list[str]:
     return re.findall(r"https?://[^\s,)]+", text)
+
+
+def _clean_query(text: str) -> str:
+    cleaned = text.strip()
+    cleaned = re.sub(r"^```(?:\w+)?|```$", "", cleaned).strip()
+    cleaned = cleaned.strip("\"'` ")
+    cleaned = re.sub(r"\s+", " ", cleaned)
+    if cleaned.startswith("[Mistral Error]"):
+        return ""
+    return cleaned
 
 
 def _safe_max_results(value: Any) -> int:

@@ -3,8 +3,8 @@ from typing import Any
 from services.tool_selector import run_selected_tool
 
 
-def enrich_prompt_with_web(prompt: str) -> tuple[str, dict[str, Any]]:
-    tool_response = run_selected_tool(prompt)
+def enrich_prompt_with_web(prompt: str, raw_prompt: str | None = None) -> tuple[str, dict[str, Any]]:
+    tool_response = run_selected_tool(raw_prompt or prompt)
     web_context = _format_web_context(tool_response)
 
     enriched_prompt = f"""Use the web context below to answer the user. Cite source URLs when using web facts.
@@ -18,6 +18,7 @@ User prompt:
 
     metadata = {
         "web_used": True,
+        "web_query": tool_response.get("query"),
         "web_tool": tool_response.get("tool"),
         "web_tool_reason": tool_response.get("reason"),
         "web_sources": _collect_sources(tool_response.get("result")),
