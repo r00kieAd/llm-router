@@ -12,10 +12,12 @@ if cors_env:
     allow_origins = [o.strip() for o in cors_env.split(",") if o.strip()]
 else:
     allow_origins = ["*"]
+allow_origin_regex = os.getenv("CORS_ALLOWED_ORIGIN_REGEX")
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allow_origins,
+    allow_origin_regex=allow_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -45,4 +47,3 @@ if __name__ == "__main__":
     host = os.getenv("HOST")
     port = int(os.getenv("PORT"))
     uvicorn.run("main:app", host=host, port=port, reload=False)
-
