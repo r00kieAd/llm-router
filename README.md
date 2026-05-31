@@ -97,6 +97,7 @@ The routing decision is dispatched to the appropriate execution layer.
 
 - OpenAI models: query_openai()
 - Gemini models: query_gemini()
+- Mistral models: query_mistral()
 
 The routing engine never executes models directly. It only produces decisions, which are consumed by execution functions.
 
@@ -153,6 +154,12 @@ All existing routes remain unchanged:
 - DELETE /clear-data: Clear all user data
 - POST /authenticate: Authenticate user
 - POST /logout: Logout user
+
+Realtime generation can also run over WebSocket:
+
+- GET `/ws/chat?username=<username>&token=<token>`: token streaming, cancellation, heartbeat, progress, tool events, and agent status updates
+
+Hybrid REST + WebSocket architecture notes are in `docs/hybrid-rest-websocket-architecture.md`.
 
 **Request payload example (/ask):**
 
