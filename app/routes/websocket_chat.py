@@ -6,6 +6,7 @@ from typing import Any
 from uuid import uuid4
 
 from fastapi import APIRouter, Header, Query, WebSocket, WebSocketDisconnect
+from fastapi.responses import JSONResponse
 
 from services.generation_service import ChatGenerationRequest, stream_generation, validate_token
 from ws.connection_manager import manager
@@ -26,6 +27,19 @@ class ActiveGeneration:
 
 
 active_generations: dict[str, ActiveGeneration] = {}
+
+
+@router.get("/ws/chat")
+@router.get("/ws/ask")
+async def websocket_http_diagnostic():
+    return JSONResponse(
+        status_code=426,
+        content={
+            "error": "websocket_upgrade_required",
+            "detail": "This endpoint only works with a WebSocket upgrade request. If a browser WebSocket logs as HTTP GET here, a proxy or server is not forwarding the Upgrade headers.",
+        },
+        headers={"Upgrade": "websocket", "Connection": "Upgrade"},
+    )
 
 
 def envelope(
