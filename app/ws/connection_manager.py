@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from fastapi import WebSocket
+from starlette.websockets import WebSocketState
 
 
 @dataclass
@@ -53,8 +54,15 @@ class WebSocketConnectionManager:
         state = self._states.get(websocket)
         if not state:
             return
+        if websocket.application_state != WebSocketState.CONNECTED:
+            await self.disconnect(websocket)
+            return
         async with state.send_lock:
-            await websocket.send_json(message)
+            try:
+                await websocket.send_json(message)
+            except Exception as exc:
+                print(f"[websocket] dropping disconnected socket after send failure: {type(exc).__name__}: {exc}")
+                await self.disconnect(websocket)
 
     async def send_to_user(self, username: str, message: dict[str, Any]) -> None:
         sockets = list(self._by_user.get(username, set()))

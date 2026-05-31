@@ -8,6 +8,11 @@ from pathlib import Path
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
 router = APIRouter()
 
+@router.get("/")
+@router.head("/")
+async def health_check():
+    return JSONResponse(status_code=200, content={"status": "ok"})
+
 @router.get("/start")
 async def start_app():
     try:
