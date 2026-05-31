@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import uuid4
 
-from fastapi import APIRouter, Header, Query, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Header, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 
 from services.generation_service import ChatGenerationRequest, stream_generation, validate_token
@@ -31,12 +31,22 @@ active_generations: dict[str, ActiveGeneration] = {}
 
 @router.get("/ws/chat")
 @router.get("/ws/ask")
-async def websocket_http_diagnostic():
+async def websocket_http_diagnostic(request: Request):
+    websocket_headers = {
+        "connection": request.headers.get("connection"),
+        "upgrade": request.headers.get("upgrade"),
+        "sec_websocket_version": request.headers.get("sec-websocket-version"),
+        "sec_websocket_key_present": bool(request.headers.get("sec-websocket-key")),
+        "origin": request.headers.get("origin"),
+        "user_agent": request.headers.get("user-agent"),
+    }
+    print(f"[websocket] HTTP request reached websocket endpoint without upgrade headers: {websocket_headers}")
     return JSONResponse(
         status_code=426,
         content={
             "error": "websocket_upgrade_required",
             "detail": "This endpoint only works with a WebSocket upgrade request. If a browser WebSocket logs as HTTP GET here, a proxy or server is not forwarding the Upgrade headers.",
+            "received_headers": websocket_headers,
         },
         headers={"Upgrade": "websocket", "Connection": "Upgrade"},
     )
