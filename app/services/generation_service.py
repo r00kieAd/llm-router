@@ -21,6 +21,7 @@ class ChatGenerationRequest(BaseModel):
     use_rag: bool = False
     top_k: int = 3
     use_web: bool = False
+    is_local: bool = False
 
 
 @dataclass
@@ -29,6 +30,7 @@ class PreparedGeneration:
     metadata: dict[str, Any]
     raw_result: dict[str, Any]
     full_response: list[str]
+    persist_response: bool = True
 
 
 class GenerationCancelled(Exception):
@@ -85,6 +87,32 @@ def prepare_generation(payload: ChatGenerationRequest) -> PreparedGeneration:
         updated_prompt, web_metadata = enrich_prompt_with_web(
             updated_prompt,
             raw_prompt=payload.prompt,
+        )
+
+    if payload.is_local:
+        result = {
+            "response": updated_prompt,
+            "provider": "local",
+            "model_used": payload.model,
+            "rag_used": rag_used,
+            **web_metadata,
+        }
+        metadata = {
+            "provider": result.get("provider"),
+            "model_used": result.get("model_used"),
+            "rag_used": rag_used,
+            "web_used": web_metadata.get("web_used", False),
+            "web_query": web_metadata.get("web_query"),
+            "web_tool": web_metadata.get("web_tool"),
+            "web_sources": web_metadata.get("web_sources", []),
+            "local_prompt": updated_prompt,
+        }
+        return PreparedGeneration(
+            response=result.get("response"),
+            metadata=metadata,
+            raw_result=result,
+            full_response=[],
+            persist_response=False,
         )
 
     result = route_to_client(updated_prompt, payload.username, payload.model, payload.instruction)
@@ -156,4 +184,5 @@ async def stream_generation(
     except Exception as exc:
         yield {"type": "error", "payload": {"message": str(exc)}}
     finally:
-        mem_instance.add_new_response(res=prepared.full_response, username=payload.username)
+        if prepared.persist_response:
+            mem_instance.add_new_response(res=prepared.full_response, username=payload.username)
